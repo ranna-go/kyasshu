@@ -19,7 +19,7 @@ defmodule Kyasshu.Webserver.Router do
   plug(:match)
   plug(:dispatch)
 
-  post "/exec" do
+  post "/v1/exec" do
     body = conn.body_params
 
     conn |> fetch_query_params()
