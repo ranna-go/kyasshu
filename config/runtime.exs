@@ -20,3 +20,7 @@ config :kyasshu, Webserver,
 config :kyasshu, Ranna,
   endpoint: System.get_env("RANNA_ENDPOINT"),
   auth_token: System.get_env("RANNA_AUTHTOKEN", "")
+
+config :kyasshu, Redis,
+  endpoint: System.get_env("REDIS_ENDPOINT"),
+  duration: System.get_env("REDIS_DURATIONSECONDS", "604800000") |> String.to_integer()

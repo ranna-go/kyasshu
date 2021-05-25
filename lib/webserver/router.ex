@@ -29,13 +29,44 @@ defmodule Kyasshu.Webserver.Router do
       language: body["language"]
     }
 
-    Kyasshu.Ranna.exec(payload) |> IO.inspect()
+    payload_hash = payload |> Kyasshu.Hashing.get_hash()
 
-    "ok" |> resp_json(conn)
-  end
+    res =
+      case Kyasshu.Cache.get_exec(payload_hash) do
+        {:ok, nil} ->
+          case Kyasshu.Ranna.exec(payload) do
+            {:error, err} ->
+              {:error, err}
 
-  get "/test" do
-    "ok" |> resp_json(conn)
+            {:ok, body, status} ->
+              data = %{
+                body: body |> Map.put(:cache_date, DateTime.utc_now()),
+                status: status
+              }
+
+              Kyasshu.Cache.set_exec!(
+                payload_hash,
+                data,
+                Application.get_env(:kyasshu, Redis)[:duration]
+              )
+
+              {:ok, data, false}
+          end
+
+        {:ok, res} ->
+          {:ok, %{body: res["body"], status: res["status"]}, true}
+
+        {:error, err} ->
+          {:error, err}
+      end
+
+    case res do
+      {:ok, %{body: body, status: status}, cached} ->
+        body |> Map.put("from_cache", cached) |> resp_json(conn, status)
+
+      {:error, err} ->
+        err |> resp_json(conn, 500)
+    end
   end
 
   match _ do

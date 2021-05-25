@@ -4,7 +4,7 @@ defmodule Kyasshu.Ranna do
       Kyasshu.Ranna.Supervisor,
       fn -> do_request(payload) end
     )
-    |> Task.await(60_000)
+    |> Task.await(120_000)
   end
 
   defp client do
@@ -12,14 +12,17 @@ defmodule Kyasshu.Ranna do
     token = Application.get_env(:kyasshu, Ranna)[:auth_token]
 
     if endpoint == nil do
-      raise "RANNA_ENDPOINT must be defined"
+      raise ArgumentError, "RANNA_ENDPOINT must be specified"
     end
 
     middleware = [
       {Tesla.Middleware.BaseUrl, endpoint},
       Tesla.Middleware.JSON,
       {Tesla.Middleware.Headers,
-       [{"authorization", "basic " <> token}, {"content-type", "application/json"}]}
+       [
+         {"authorization", "basic " <> token},
+         {"content-type", "application/json"}
+       ]}
     ]
 
     Tesla.client(middleware)
@@ -29,15 +32,8 @@ defmodule Kyasshu.Ranna do
     res = Tesla.post(client(), "/v1/exec", Jason.encode!(payload))
 
     case res do
-      {:error, e} ->
-        {:error, e}
-
-      {:ok, res} ->
-        if res.status >= 400 do
-          {:error, res.body}
-        else
-          {:ok, res.body}
-        end
+      {:error, e} -> {:error, e}
+      {:ok, res} -> {:ok, res.body, res.status}
     end
   end
 end

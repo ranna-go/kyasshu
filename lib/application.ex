@@ -16,7 +16,8 @@ defmodule Kyasshu.Application do
       {
         Task.Supervisor,
         name: Kyasshu.Ranna.Supervisor
-      }
+      },
+      Kyasshu.Cache.Supervisor
     ]
 
     Logger.info("Webserver running ...")
