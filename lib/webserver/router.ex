@@ -22,6 +22,9 @@ defmodule Kyasshu.Webserver.Router do
   post "/exec" do
     body = conn.body_params
 
+    conn |> fetch_query_params()
+    bypass_cache = conn |> query_true?("bypass_cache")
+
     payload = %{
       arguments: body["arguments"],
       code: body["code"],
@@ -31,14 +34,21 @@ defmodule Kyasshu.Webserver.Router do
 
     payload_hash = payload |> Kyasshu.Hashing.get_hash()
 
+    from_cache =
+      if bypass_cache do
+        {:ok, nil}
+      else
+        Kyasshu.Cache.get_exec(payload_hash)
+      end
+
     res =
-      case Kyasshu.Cache.get_exec(payload_hash) do
+      case from_cache do
         {:ok, nil} ->
           case Kyasshu.Ranna.exec(payload) do
             {:error, err} ->
               {:error, err}
 
-            {:ok, body, status} ->
+            {:ok, body, status} when is_map(body) ->
               data = %{
                 body: body |> Map.put(:cache_date, DateTime.utc_now()),
                 status: status
@@ -51,6 +61,9 @@ defmodule Kyasshu.Webserver.Router do
               )
 
               {:ok, data, false}
+
+            {:ok, body, status} when is_binary(body) ->
+              {:ok, body, status}
           end
 
         {:ok, res} ->
@@ -63,6 +76,9 @@ defmodule Kyasshu.Webserver.Router do
     case res do
       {:ok, %{body: body, status: status}, cached} ->
         body |> Map.put("from_cache", cached) |> resp_json(conn, status)
+
+      {:ok, data, status} ->
+        data |> resp_json(conn, status)
 
       {:error, err} ->
         err |> resp_json(conn, 500)

@@ -75,4 +75,11 @@ defmodule Kyasshu.Webserver.Util do
   """
   def resp_json_ok(data \\ %{code: 200, message: "ok"}, conn),
     do: data |> resp_json(conn, 200)
+
+  def query_true?(conn, query) do
+    case conn.query_params[query] do
+      nil -> false
+      x -> x == "1" or x |> String.downcase() == "true"
+    end
+  end
 end
