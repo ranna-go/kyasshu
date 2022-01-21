@@ -29,7 +29,8 @@ defmodule Kyasshu.Webserver.Router do
       arguments: body["arguments"],
       code: body["code"],
       environment: body["environment"],
-      language: body["language"]
+      language: body["language"],
+      inline_expression: body["inline_expression"],
     }
 
     payload_hash = payload |> Kyasshu.Hashing.get_hash()
